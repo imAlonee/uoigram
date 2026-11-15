@@ -175,6 +175,17 @@ jobs:
           key: ${{ runner.OS }}-${{ matrix.arch }}-${{ matrix.qt || 'qt' }}-${{ env.CACHE_KEY }}
           restore-keys: ${{ runner.OS }}-${{ matrix.arch }}-${{ matrix.qt || 'qt' }}-
 
+      # UoiGram: an earlier run pruned the generated Rust sources and saved that state into the
+      # cache. When they are missing, drop only the Rust stages so just they are rebuilt.
+      - name: Reset Rust stages whose generated sources were pruned.
+        shell: bash
+        run: |
+          if [ ! -f "$LibrariesPath/tdesktop_rust/out/src/wallet_engine/wallet_engine.cpp" ]; then
+            echo "Generated Rust sources are missing, resetting Rust stages."
+            rm -rf "$LibrariesPath/tdesktop_rust" "$LibrariesPath/tlottie" "$LibrariesPath/wallet-engine"
+            rm -f "$LibrariesPath/cache_keys/tdesktop_rust" "$LibrariesPath/cache_keys/tlottie" "$LibrariesPath/cache_keys/wallet-engine"
+          fi
+
       - name: Libraries.
         run: |
           %TBUILD%\%REPO_NAME%\Telegram\build\prepare\win.bat skip-release silent ${{ matrix.qt }}
@@ -227,7 +238,7 @@ jobs:
       - name: Free up some disk space.
         if: always()
         shell: bash
-        run: find $LibrariesPath '(' '(' ! '(' -name '*.lib' -o -name '*.a' -o -name '*.exe' -o -name '*.h' -o -name '*.hpp' -o -name '*.inc' -o -name '*.cmake' -o -name '*.pc' -o -path '*/include/*' -o -path '*/objects-*' -o -path '*/cache_keys/*' -o -path '*/patches/*' -o -path '*/nv-codec-headers/*' ')' -type f ')' -o -empty ')' -delete
+        run: find $LibrariesPath '(' '(' ! '(' -name '*.lib' -o -name '*.a' -o -name '*.exe' -o -name '*.h' -o -name '*.hpp' -o -name '*.inc' -o -name '*.cmake' -o -name '*.pc' -o -path '*/include/*' -o -path '*/objects-*' -o -path '*/cache_keys/*' -o -path '*/patches/*' -o -path '*/nv-codec-headers/*' -o -path '*/tdesktop_rust/out/*' ')' -type f ')' -o -empty ')' -delete
 
       - name: Telegram Desktop build.
         if: env.ONLY_CACHE == 'false'
